@@ -879,6 +879,7 @@ var LeiaWebGLRenderer = function (parameters) {
         this.matSharpen;
         this.matSuperSample;
         this.matSSS;
+        this.matSSSTest;
         this._swizzleRenderTargetSftX;
         this._swizzleRenderTargetSftY;
         this._swizzleRenderTargetSftXY;
@@ -1293,15 +1294,178 @@ var LeiaWebGLRenderer = function (parameters) {
             "if (viewId.s< 7.00){if (viewId.t<6.00){ coeff = coeff+invASSS[0*6 + 2];fc = fc+getPixel(invASSS[0*6 + 2],tSuperD, vec2(viewId.s+1.00, viewId.t+2.00), sPixId);}};\n" +
             "if (viewId.s< 6.00){if (viewId.t<6.00){ coeff = coeff+invASSS[0*6 + 1];fc = fc+getPixel(invASSS[0*6 + 1],tSuperY, vec2(viewId.s+2.00, viewId.t+2.00), sPixId);}};\n" +
             "if (viewId.s< 6.00){if (viewId.t<6.00){ coeff = coeff+invASSS[0*6 + 0];fc = fc+getPixel(invASSS[0*6 + 0],tSuperD, vec2(viewId.s+2.00, viewId.t+2.00), sPixId);}};\n" +
-
-
             "fc = fc/coeff;" +
         //    "fc = 1.0 - fc;" +
             "gl_FragColor = vec4(fc, fc, fc, 1.0);" +
         "}";
 
 
+        // SSS test
+        var _SSSSwizzleFragmentShaderSrcTest =
+        "precision highp float;" +
+        "varying  vec2 vUv; 			\n" +
+        "uniform sampler2D tNormalViews; 			\n" +
+        "uniform sampler2D tSuperX; 			\n" +
+        "uniform sampler2D tSuperY; 			\n" +
+        "uniform sampler2D tSuperD; 			\n" +
+        "uniform vec2 renderSize;              \n " +
+        "float getPixel( in float amplitude, in sampler2D texture, in vec2 viewId, in vec2 sPixId) {  \n" +
+            "vec2 id  = vec2( ( sPixId.s + viewId.s*renderSize.x/8.0 )/renderSize.x + 1.0/(2.0*renderSize.x), ( sPixId.t + viewId.t*renderSize.y/8.0 )/renderSize.y+ 1.0/(2.0*renderSize.y) ); \n" +
+            "vec4 p   = texture2D( texture, id );\n" +
+            "float pb = amplitude * ( p.r + p.g + p.b ) / 3.0;\n" +
+            "return pb;\n" +
+            "}\n" +
+        "void main(void) {						\n" +
+            "vec2 pixelCoord = vec2( floor((vUv.s)*renderSize.x), floor(vUv.t*renderSize.y) ); " +
+            "pixelCoord      = vec2(max(pixelCoord.s - 0.0, 0.0), max(pixelCoord.t - 0.0, 0.0));" +
+            "vec2 viewId     = vec2(   mod(pixelCoord.s,8.0)  ,   mod(pixelCoord.t,8.0)  ); " +
+            "vec2 sPixId     = vec2( floor(pixelCoord.s/8.0)  , floor(pixelCoord.t/8.0)  ); " +
+            //"vec2 sPixId     = vec2(   mod(pixelCoord.s, 200.0)  ,   mod(pixelCoord.t, 150.0)  ); " +
+            //"vec2 viewId     = vec2( floor(pixelCoord.s/200.0)  , floor(pixelCoord.t/150.0)  ); " +
+            "float fc        = 0.0;" +
 
+            //"float imgCoeff = 1.0 - 4.0*(-0.95) - 4.0*0.64;" +
+            //"float nnCoeff = -0.95;" +
+            //"float nxnCoeff = 0.64;" +
+            "float coeff = 0.0;" +
+
+            "if (viewId.s>=3.00){if (viewId.t>=3.00){ coeff = coeff-0.00373;fc = fc+getPixel(-0.00373,tSuperD, vec2(viewId.s-3.00, viewId.t-3.00), sPixId);}};\n" +
+            "if (viewId.s>=2.00){if (viewId.t>=3.00){ coeff = coeff-0.00559;fc = fc+getPixel(-0.00559,tSuperY, vec2(viewId.s-2.00, viewId.t-3.00), sPixId);}};\n" +
+            "if (viewId.s>=2.00){if (viewId.t>=3.00){ coeff = coeff+0.01638;fc = fc+getPixel(0.01638,tSuperD, vec2(viewId.s-2.00, viewId.t-3.00), sPixId);}};\n" +
+            "if (viewId.s>=1.00){if (viewId.t>=3.00){ coeff = coeff+0.03016;fc = fc+getPixel(0.03016,tSuperY, vec2(viewId.s-1.00, viewId.t-3.00), sPixId);}};\n" +
+            "if (viewId.s>=1.00){if (viewId.t>=3.00){ coeff = coeff+0.00581;fc = fc+getPixel(0.00581,tSuperD, vec2(viewId.s-1.00, viewId.t-3.00), sPixId);}};\n" +
+            "                   {if (viewId.t>=3.00){ coeff = coeff-0.02145;fc = fc+getPixel(-0.02145,tSuperY, vec2(viewId.s,     viewId.t-3.00), sPixId);}};\n" +
+            "                   {if (viewId.t>=3.00){ coeff = coeff+0.00581;fc = fc+getPixel(0.00581,tSuperD, vec2(viewId.s,      viewId.t-3.00), sPixId);}};\n" +
+            "if (viewId.s< 7.00){if (viewId.t>=3.00){ coeff = coeff+0.03016;fc = fc+getPixel(0.03016,tSuperY, vec2(viewId.s+1.00, viewId.t-3.00), sPixId);}};\n" +
+            "if (viewId.s< 7.00){if (viewId.t>=3.00){ coeff = coeff+0.01638;fc = fc+getPixel(0.01638,tSuperD, vec2(viewId.s+1.00, viewId.t-3.00), sPixId);}};\n" +
+            "if (viewId.s< 6.00){if (viewId.t>=3.00){ coeff = coeff-0.00559;fc = fc+getPixel(-0.00559,tSuperY, vec2(viewId.s+2.00, viewId.t-3.00), sPixId);}};\n" +
+            "if (viewId.s< 6.00){if (viewId.t>=3.00){ coeff = coeff-0.00373;fc = fc+getPixel(-0.00373,tSuperD, vec2(viewId.s+2.00, viewId.t-3.00), sPixId);}};\n" +
+
+            "if (viewId.s>=3.00){if (viewId.t>=2.00){ coeff = coeff-0.00559;fc = fc+getPixel(-0.00559,tSuperX, vec2(viewId.s-3.00, viewId.t-2.00), sPixId);}};\n" +
+            "if (viewId.s>=2.00){if (viewId.t>=2.00){ coeff = coeff-0.03730;fc = fc+getPixel(-0.03730,tNormalViews, vec2(viewId.s-2.00, viewId.t-2.00), sPixId);}};\n" +
+            "if (viewId.s>=2.00){if (viewId.t>=2.00){ coeff = coeff+0.02457;fc = fc+getPixel(0.02457,tSuperX, vec2(viewId.s-2.00, viewId.t-2.00), sPixId);}};\n" +
+            "if (viewId.s>=1.00){if (viewId.t>=2.00){ coeff = coeff+0.20110;fc = fc+getPixel(0.20110,tNormalViews, vec2(viewId.s-1.00, viewId.t-2.00), sPixId);}};\n" +
+            "if (viewId.s>=1.00){if (viewId.t>=2.00){ coeff = coeff+0.00871;fc = fc+getPixel(0.00871,tSuperX, vec2(viewId.s-1.00, viewId.t-2.00), sPixId);}};\n" +
+            "                   {if (viewId.t>=2.00){ coeff = coeff-0.14301;fc = fc+getPixel(-0.14301,tNormalViews, vec2(viewId.s, viewId.t-2.00), sPixId);}};\n" +
+            "                   {if (viewId.t>=2.00){ coeff = coeff+0.00871;fc = fc+getPixel(0.00871,tSuperX, vec2(viewId.s, viewId.t-2.00), sPixId);}};\n" +
+            "if (viewId.s< 7.00){if (viewId.t>=2.00){ coeff = coeff+0.20110;fc = fc+getPixel(0.20110,tNormalViews, vec2(viewId.s+1.00, viewId.t-2.00), sPixId);}};\n" +
+            "if (viewId.s< 7.00){if (viewId.t>=2.00){ coeff = coeff+0.02457;fc = fc+getPixel(0.02457,tSuperX, vec2(viewId.s+1.00, viewId.t-2.00), sPixId);}};\n" +
+            "if (viewId.s< 6.00){if (viewId.t>=2.00){ coeff = coeff-0.03730;fc = fc+getPixel(-0.03730,tNormalViews, vec2(viewId.s+2.00, viewId.t-2.00), sPixId);}};\n" +
+            "if (viewId.s <6.00){if (viewId.t>=2.00){ coeff = coeff-0.00559;fc = fc+getPixel(-0.00559,tSuperX, vec2(viewId.s+2.00, viewId.t-2.00), sPixId);}};\n" +
+
+            "if (viewId.s>=3.00){if (viewId.t>=2.00){ coeff = coeff+0.00746;fc = fc+getPixel(0.00746,tSuperD, vec2(viewId.s-3.00, viewId.t-2.00), sPixId);}};\n" +
+            "if (viewId.s>=2.00){if (viewId.t>=2.00){ coeff = coeff+0.01119;fc = fc+getPixel(0.01119,tSuperY, vec2(viewId.s-2.00, viewId.t-2.00), sPixId);}};\n" +
+            "if (viewId.s>=2.00){if (viewId.t>=2.00){ coeff = coeff-0.01795;fc = fc+getPixel(-0.01795,tSuperD, vec2(viewId.s-2.00, viewId.t-2.00), sPixId);}};\n" +
+            "if (viewId.s>=1.00){if (viewId.t>=2.00){ coeff = coeff-0.03811;fc = fc+getPixel(-0.03811,tSuperY, vec2(viewId.s-1.00, viewId.t-2.00), sPixId);}};\n" +
+            "if (viewId.s>=1.00){if (viewId.t>=2.00){ coeff = coeff-0.08873;fc = fc+getPixel(-0.08873,tSuperD, vec2(viewId.s-1.00, viewId.t-2.00), sPixId);}};\n" +
+            "                   {if (viewId.t>=2.00){ coeff = coeff-0.09498;fc = fc+getPixel(-0.09498,tSuperY, vec2(viewId.s, viewId.t-2.00), sPixId);}};\n" +
+            "                   {if (viewId.t>=2.00){ coeff = coeff-0.08873;fc = fc+getPixel(-0.08873,tSuperD, vec2(viewId.s, viewId.t-2.00), sPixId);}};\n" +
+            "if (viewId.s< 7.00){if (viewId.t>=2.00){ coeff = coeff-0.03811;fc = fc+getPixel(-0.03811,tSuperY, vec2(viewId.s+1.00, viewId.t-2.00), sPixId);}};\n" +
+            "if (viewId.s< 7.00){if (viewId.t>=2.00){ coeff = coeff-0.01795;fc = fc+getPixel(-0.01795,tSuperD, vec2(viewId.s+1.00, viewId.t-2.00), sPixId);}};\n" +
+            "if (viewId.s< 6.00){if (viewId.t>=2.00){ coeff = coeff+0.01119;fc = fc+getPixel(0.01119,tSuperY, vec2(viewId.s+2.00, viewId.t-2.00), sPixId);}};\n" +
+            "if (viewId.s< 6.00){if (viewId.t>=2.00){ coeff = coeff+0.00746;fc = fc+getPixel(0.00746,tSuperD, vec2(viewId.s+2.00, viewId.t-2.00), sPixId);}};\n" +
+
+            "if (viewId.s>=3.00){if (viewId.t>=1.00){ coeff = coeff+0.01679;fc = fc+getPixel(0.01679,tSuperX, vec2(viewId.s-3.00, viewId.t-1.00), sPixId);}};\n" +
+            "if (viewId.s>=2.00){if (viewId.t>=1.00){ coeff = coeff+0.11192;fc = fc+getPixel(0.11192,tNormalViews, vec2(viewId.s-2.00, viewId.t-1.00), sPixId);}};\n" +
+            "if (viewId.s>=2.00){if (viewId.t>=1.00){ coeff = coeff-0.05149;fc = fc+getPixel(-0.05149,tSuperX, vec2(viewId.s-2.00, viewId.t-1.00), sPixId);}};\n" +
+            "if (viewId.s>=1.00){if (viewId.t>=1.00){ coeff = coeff-0.45520;fc = fc+getPixel(-0.45520,tNormalViews, vec2(viewId.s-1.00, viewId.t-1.00), sPixId);}};\n" +
+            "if (viewId.s>=1.00){if (viewId.t>=1.00){ coeff = coeff-0.14181;fc = fc+getPixel(-0.14181,tSuperX, vec2(viewId.s-1.00, viewId.t-1.00), sPixId);}};\n" +
+            "                   {if (viewId.t>=1.00){ coeff = coeff-0.49018;fc = fc+getPixel(-0.49018,tNormalViews, vec2(viewId.s, viewId.t-1.00), sPixId);}};\n" +
+            "                   {if (viewId.t>=1.00){ coeff = coeff-0.14181;fc = fc+getPixel(-0.14181,tSuperX, vec2(viewId.s, viewId.t-1.00), sPixId);}};\n" +
+            "if (viewId.s< 7.00){if (viewId.t>=1.00){ coeff = coeff-0.45520;fc = fc+getPixel(-0.45520,tNormalViews, vec2(viewId.s+1.00, viewId.t-1.00), sPixId);}};\n" +
+            "if (viewId.s< 7.00){if (viewId.t>=1.00){ coeff = coeff-0.05149;fc = fc+getPixel(-0.05149,tSuperX, vec2(viewId.s+1.00, viewId.t-1.00), sPixId);}};\n" +
+            "if (viewId.s< 6.00){if (viewId.t>=1.00){ coeff = coeff+0.11192;fc = fc+getPixel(0.11192,tNormalViews, vec2(viewId.s+2.00, viewId.t-1.00), sPixId);}};\n" +
+            "if (viewId.s< 6.00){if (viewId.t>=1.00){ coeff = coeff+0.01679;fc = fc+getPixel(0.01679,tSuperX, vec2(viewId.s+2.00, viewId.t-1.00), sPixId);}};\n" +
+
+            "if (viewId.s>=3.00){if (viewId.t>=1.00){ coeff = coeff+0.01033;fc = fc+getPixel(0.01033,tSuperD, vec2(viewId.s-3.00, viewId.t-1.00), sPixId);}};\n" +
+            "if (viewId.s>=2.00){if (viewId.t>=1.00){ coeff = coeff+0.01549;fc = fc+getPixel(0.01549,tSuperY, vec2(viewId.s-2.00, viewId.t-1.00), sPixId);}};\n" +
+            "if (viewId.s>=2.00){if (viewId.t>=1.00){ coeff = coeff-0.05796;fc = fc+getPixel(-0.05796,tSuperD, vec2(viewId.s-2.00, viewId.t-1.00), sPixId);}};\n" +
+            "if (viewId.s>=1.00){if (viewId.t>=1.00){ coeff = coeff-0.10243;fc = fc+getPixel(-0.10243,tSuperY, vec2(viewId.s-1.00, viewId.t-1.00), sPixId);}};\n" +
+            "if (viewId.s>=1.00){if (viewId.t>=1.00){ coeff = coeff+0.22839;fc = fc+getPixel(0.22839,tSuperD, vec2(viewId.s-1.00, viewId.t-1.00), sPixId);}};\n" +
+            "                   {if (viewId.t>=1.00){ coeff = coeff+0.44501;fc = fc+getPixel(0.44501,tSuperY, vec2(viewId.s, viewId.t-1.00), sPixId);}};\n" +
+            "                   {if (viewId.t>=1.00){ coeff = coeff+0.22839;fc = fc+getPixel(0.22839,tSuperD, vec2(viewId.s, viewId.t-1.00), sPixId);}};\n" +
+            "if (viewId.s< 7.00){if (viewId.t>=1.00){ coeff = coeff-0.10243;fc = fc+getPixel(-0.10243,tSuperY, vec2(viewId.s+1.00, viewId.t-1.00), sPixId);}};\n" +
+            "if (viewId.s< 7.00){if (viewId.t>=1.00){ coeff = coeff-0.05796;fc = fc+getPixel(-0.05796,tSuperD, vec2(viewId.s+1.00, viewId.t-1.00), sPixId);}};\n" +
+            "if (viewId.s< 6.00){if (viewId.t>=1.00){ coeff = coeff+0.01549;fc = fc+getPixel(0.01549,tSuperY, vec2(viewId.s+2.00, viewId.t-1.00), sPixId);}};\n" +
+            "if (viewId.s< 6.00){if (viewId.t>=1.00){ coeff = coeff+0.01033;fc = fc+getPixel(0.01033,tSuperD, vec2(viewId.s+2.00, viewId.t-1.00), sPixId);}};\n" +
+
+            "if (viewId.s>=3.00){{ coeff = coeff-0.00130;fc = fc+getPixel(-0.00130,tSuperX, vec2(viewId.s-3.00, viewId.t), sPixId);}};\n" +
+            "if (viewId.s>=2.00){{ coeff = coeff-0.00864;fc = fc+getPixel(-0.00864,tNormalViews, vec2(viewId.s-2.00, viewId.t), sPixId);}};\n" +
+            "if (viewId.s>=2.00){{ coeff = coeff-0.03544;fc = fc+getPixel(-0.03544,tSuperX, vec2(viewId.s-2.00, viewId.t), sPixId);}};\n" +
+            "if (viewId.s>=1.00){{ coeff = coeff-0.22765;fc = fc+getPixel(-0.22765,tNormalViews, vec2(viewId.s-1.00, viewId.t), sPixId);}};\n" +
+            "if (viewId.s>=1.00){{ coeff = coeff+0.48439;fc = fc+getPixel(0.48439,tSuperX, vec2(viewId.s-1.00, viewId.t), sPixId);}};\n" +
+            "                   {{ coeff = coeff+3.45690;fc = fc+getPixel(3.45690,tNormalViews, vec2(viewId.s, viewId.t), sPixId);}};\n" +
+            "                   {{ coeff = coeff+0.48439;fc = fc+getPixel(0.48439,tSuperX, vec2(viewId.s, viewId.t), sPixId);}};\n" +
+            "if (viewId.s< 7.00){{ coeff = coeff-0.22765;fc = fc+getPixel(-0.22765,tNormalViews, vec2(viewId.s+1.00, viewId.t), sPixId);}};\n" +
+            "if (viewId.s< 7.00){{ coeff = coeff-0.03544;fc = fc+getPixel(-0.03544,tSuperX, vec2(viewId.s+1.00, viewId.t), sPixId);}};\n" +
+            "if (viewId.s< 6.00){{ coeff = coeff-0.00864;fc = fc+getPixel(-0.00864,tNormalViews, vec2(viewId.s+2.00, viewId.t), sPixId);}};\n" +
+            "if (viewId.s< 6.00){{ coeff = coeff-0.00130;fc = fc+getPixel(-0.00130,tSuperX, vec2(viewId.s+2.00, viewId.t), sPixId);}};\n" +
+
+            "if (viewId.s>=3.00){{ coeff = coeff+0.01033;fc = fc+getPixel(0.01033,tSuperD, vec2(viewId.s-3.00, viewId.t), sPixId);}};\n" +
+            "if (viewId.s>=2.00){{ coeff = coeff+0.01549;fc = fc+getPixel(0.01549,tSuperY, vec2(viewId.s-2.00, viewId.t), sPixId);}};\n" +
+            "if (viewId.s>=2.00){{ coeff = coeff-0.05796;fc = fc+getPixel(-0.05796,tSuperD, vec2(viewId.s-2.00, viewId.t), sPixId);}};\n" +
+            "if (viewId.s>=1.00){{ coeff = coeff-0.10243;fc = fc+getPixel(-0.10243,tSuperY, vec2(viewId.s-1.00, viewId.t), sPixId);}};\n" +
+            "if (viewId.s>=1.00){{ coeff = coeff+0.22839;fc = fc+getPixel(0.22839,tSuperD, vec2(viewId.s-1.00, viewId.t), sPixId);}};\n" +
+            "                   {{ coeff = coeff+0.44501;fc = fc+getPixel(0.44501,tSuperY, vec2(viewId.s, viewId.t), sPixId);}};\n" +
+            "                   {{ coeff = coeff+0.22839;fc = fc+getPixel(0.22839,tSuperD, vec2(viewId.s, viewId.t), sPixId);}};\n" +
+            "if (viewId.s< 7.00){{ coeff = coeff-0.10243;fc = fc+getPixel(-0.10243,tSuperY, vec2(viewId.s+1.00, viewId.t), sPixId);}};\n" +
+            "if (viewId.s< 7.00){{ coeff = coeff-0.05796;fc = fc+getPixel(-0.05796,tSuperD, vec2(viewId.s+1.00, viewId.t), sPixId);}};\n" +
+            "if (viewId.s< 6.00){{ coeff = coeff+0.01549;fc = fc+getPixel(0.01549,tSuperY, vec2(viewId.s+2.00, viewId.t), sPixId);}};\n" +
+            "if (viewId.s< 6.00){{ coeff = coeff+0.01033;fc = fc+getPixel(0.01033,tSuperD, vec2(viewId.s+2.00, viewId.t), sPixId);}};\n" +
+
+            "if (viewId.s>=3.00){if (viewId.t<7.00){ coeff = coeff+0.01679;fc = fc+getPixel(0.01679,tSuperX, vec2(viewId.s-3.00, viewId.t+1.00), sPixId);}};\n" +
+            "if (viewId.s>=2.00){if (viewId.t<7.00){ coeff = coeff+0.11192;fc = fc+getPixel(0.11192,tNormalViews, vec2(viewId.s-2.00, viewId.t+1.00), sPixId);}};\n" +
+            "if (viewId.s>=2.00){if (viewId.t<7.00){ coeff = coeff-0.05149;fc = fc+getPixel(-0.05149,tSuperX, vec2(viewId.s-2.00, viewId.t+1.00), sPixId);}};\n" +
+            "if (viewId.s>=1.00){if (viewId.t<7.00){ coeff = coeff-0.45520;fc = fc+getPixel(-0.45520,tNormalViews, vec2(viewId.s-1.00, viewId.t+1.00), sPixId);}};\n" +
+            "if (viewId.s>=1.00){if (viewId.t<7.00){ coeff = coeff-0.14181;fc = fc+getPixel(-0.14181,tSuperX, vec2(viewId.s-1.00, viewId.t+1.00), sPixId);}};\n" +
+            "                   {if (viewId.t<7.00){ coeff = coeff-0.49018;fc = fc+getPixel(-0.49018,tNormalViews, vec2(viewId.s, viewId.t+1.00), sPixId);}};\n" +
+            "                   {if (viewId.t<7.00){ coeff = coeff-0.14181;fc = fc+getPixel(-0.14181,tSuperX, vec2(viewId.s, viewId.t+1.00), sPixId);}};\n" +
+            "if (viewId.s< 7.00){if (viewId.t<7.00){ coeff = coeff-0.45520;fc = fc+getPixel(-0.45520,tNormalViews, vec2(viewId.s+1.00, viewId.t+1.00), sPixId);}};\n" +
+            "if (viewId.s< 7.00){if (viewId.t<7.00){ coeff = coeff-0.05149;fc = fc+getPixel(-0.05149,tSuperX, vec2(viewId.s+1.00, viewId.t+1.00), sPixId);}};\n" +
+            "if (viewId.s< 6.00){if (viewId.t<7.00){ coeff = coeff+0.11192;fc = fc+getPixel(0.11192,tNormalViews, vec2(viewId.s+2.00, viewId.t+1.00), sPixId);}};\n" +
+            "if (viewId.s< 6.00){if (viewId.t<7.00){ coeff = coeff+0.01679;fc = fc+getPixel(0.01679,tSuperX, vec2(viewId.s+2.00, viewId.t+1.00), sPixId);}};\n" +
+
+            "if (viewId.s>=3.00){if (viewId.t<7.00){ coeff = coeff+0.00746;fc = fc+getPixel(0.00746,tSuperD, vec2(viewId.s-3.00, viewId.t+1.00), sPixId);}};\n" +
+            "if (viewId.s>=2.00){if (viewId.t<7.00){ coeff = coeff+0.01119;fc = fc+getPixel(0.01119,tSuperY, vec2(viewId.s-2.00, viewId.t+1.00), sPixId);}};\n" +
+            "if (viewId.s>=2.00){if (viewId.t<7.00){ coeff = coeff-0.01795;fc = fc+getPixel(-0.01795,tSuperD, vec2(viewId.s-2.00, viewId.t+1.00), sPixId);}};\n" +
+            "if (viewId.s>=1.00){if (viewId.t<7.00){ coeff = coeff-0.03811;fc = fc+getPixel(-0.03811,tSuperY, vec2(viewId.s-1.00, viewId.t+1.00), sPixId);}};\n" +
+            "if (viewId.s>=1.00){if (viewId.t<7.00){ coeff = coeff-0.08873;fc = fc+getPixel(-0.08873,tSuperD, vec2(viewId.s-1.00, viewId.t+1.00), sPixId);}};\n" +
+            "                   {if (viewId.t<7.00){ coeff = coeff-0.09498;fc = fc+getPixel(-0.09498,tSuperY, vec2(viewId.s, viewId.t+1.00), sPixId);}};\n" +
+            "                   {if (viewId.t<7.00){ coeff = coeff-0.08873;fc = fc+getPixel(-0.08873,tSuperD, vec2(viewId.s, viewId.t+1.00), sPixId);}};\n" +
+            "if (viewId.s< 7.00){if (viewId.t<7.00){ coeff = coeff-0.03811;fc = fc+getPixel(-0.03811,tSuperY, vec2(viewId.s+1.00, viewId.t+1.00), sPixId);}};\n" +
+            "if (viewId.s< 7.00){if (viewId.t<7.00){ coeff = coeff-0.01795;fc = fc+getPixel(-0.01795,tSuperD, vec2(viewId.s+1.00, viewId.t+1.00), sPixId);}};\n" +
+            "if (viewId.s< 6.00){if (viewId.t<7.00){ coeff = coeff+0.01119;fc = fc+getPixel(0.01119,tSuperY, vec2(viewId.s+2.00, viewId.t+1.00), sPixId);}};\n" +
+            "if (viewId.s< 6.00){if (viewId.t<7.00){ coeff = coeff+0.00746;fc = fc+getPixel(0.00746,tSuperD, vec2(viewId.s+2.00, viewId.t+1.00), sPixId);}};\n" +
+
+            "if (viewId.s>=3.00){if (viewId.t<6.00){ coeff = coeff-0.00559;fc = fc+getPixel(-0.00559,tSuperX, vec2(viewId.s-3.00, viewId.t+2.00), sPixId);}};\n" +
+            "if (viewId.s>=2.00){if (viewId.t<6.00){ coeff = coeff-0.03730;fc = fc+getPixel(-0.03730,tNormalViews, vec2(viewId.s-2.00, viewId.t+2.00), sPixId);}};\n" +
+            "if (viewId.s>=2.00){if (viewId.t<6.00){ coeff = coeff+0.02457;fc = fc+getPixel(0.02457,tSuperX, vec2(viewId.s-2.00, viewId.t+2.00), sPixId);}};\n" +
+            "if (viewId.s>=1.00){if (viewId.t<6.00){ coeff = coeff+0.20110;fc = fc+getPixel(0.20110,tNormalViews, vec2(viewId.s-1.00, viewId.t+2.00), sPixId);}};\n" +
+            "if (viewId.s>=1.00){if (viewId.t<6.00){ coeff = coeff+0.00871;fc = fc+getPixel(0.00871,tSuperX, vec2(viewId.s-1.00, viewId.t+2.00), sPixId);}};\n" +
+            "                   {if (viewId.t<6.00){ coeff = coeff-0.14301;fc = fc+getPixel(-0.14301,tNormalViews, vec2(viewId.s, viewId.t+2.00), sPixId);}};\n" +
+            "                   {if (viewId.t<6.00){ coeff = coeff+0.00871;fc = fc+getPixel(0.00871,tSuperX, vec2(viewId.s, viewId.t+2.00), sPixId);}};\n" +
+            "if (viewId.s< 7.00){if (viewId.t<6.00){ coeff = coeff+0.20110;fc = fc+getPixel(0.20110,tNormalViews, vec2(viewId.s+1.00, viewId.t+2.00), sPixId);}};\n" +
+            "if (viewId.s< 7.00){if (viewId.t<6.00){ coeff = coeff+0.02457;fc = fc+getPixel(0.02457,tSuperX, vec2(viewId.s+1.00, viewId.t+2.00), sPixId);}};\n" +
+            "if (viewId.s< 6.00){if (viewId.t<6.00){ coeff = coeff-0.03730;fc = fc+getPixel(-0.03730,tNormalViews, vec2(viewId.s+2.00, viewId.t+2.00), sPixId);}};\n" +
+            "if (viewId.s <6.00){if (viewId.t<6.00){ coeff = coeff-0.00559;fc = fc+getPixel(-0.00559,tSuperX, vec2(viewId.s+2.00, viewId.t+2.00), sPixId);}};\n" +
+
+            "if (viewId.s>=3.00){if (viewId.t<6.00){ coeff = coeff-0.00373;fc = fc+getPixel(-0.00373,tSuperD, vec2(viewId.s-3.00, viewId.t+2.00), sPixId);}};\n" +
+            "if (viewId.s>=2.00){if (viewId.t<6.00){ coeff = coeff-0.00559;fc = fc+getPixel(-0.00559,tSuperY, vec2(viewId.s-2.00, viewId.t+2.00), sPixId);}};\n" +
+            "if (viewId.s>=2.00){if (viewId.t<6.00){ coeff = coeff+0.01638;fc = fc+getPixel(0.01638,tSuperD, vec2(viewId.s-2.00, viewId.t+2.00), sPixId);}};\n" +
+            "if (viewId.s>=1.00){if (viewId.t<6.00){ coeff = coeff+0.03016;fc = fc+getPixel(0.03016,tSuperY, vec2(viewId.s-1.00, viewId.t+2.00), sPixId);}};\n" +
+            "if (viewId.s>=1.00){if (viewId.t<6.00){ coeff = coeff+0.00581;fc = fc+getPixel(0.00581,tSuperD, vec2(viewId.s-1.00, viewId.t+2.00), sPixId);}};\n" +
+            "                   {if (viewId.t<6.00){ coeff = coeff-0.02145;fc = fc+getPixel(-0.02145,tSuperY, vec2(viewId.s, viewId.t+2.00), sPixId);}};\n" +
+            "                   {if (viewId.t<6.00){ coeff = coeff+0.00581;fc = fc+getPixel(0.00581,tSuperD, vec2(viewId.s, viewId.t+2.00), sPixId);}};\n" +
+            "if (viewId.s< 7.00){if (viewId.t<6.00){ coeff = coeff+0.03016;fc = fc+getPixel(0.03016,tSuperY, vec2(viewId.s+1.00, viewId.t+2.00), sPixId);}};\n" +
+            "if (viewId.s< 7.00){if (viewId.t<6.00){ coeff = coeff+0.01638;fc = fc+getPixel(0.01638,tSuperD, vec2(viewId.s+1.00, viewId.t+2.00), sPixId);}};\n" +
+            "if (viewId.s< 6.00){if (viewId.t<6.00){ coeff = coeff-0.00559;fc = fc+getPixel(-0.00559,tSuperY, vec2(viewId.s+2.00, viewId.t+2.00), sPixId);}};\n" +
+            "if (viewId.s< 6.00){if (viewId.t<6.00){ coeff = coeff-0.00373;fc = fc+getPixel(-0.00373,tSuperD, vec2(viewId.s+2.00, viewId.t+2.00), sPixId);}};\n" +
+
+
+            "fc = fc/coeff;" +
+        //    "fc = 1.0 - fc;" +
+            "gl_FragColor = vec4(fc, fc, fc, 1.0);" +
+        "}";
 
 
 
@@ -1381,8 +1545,31 @@ var LeiaWebGLRenderer = function (parameters) {
             });
             this.materialSwizzle = this.matSSS;
         }
+        this.useSSSSTestShader = function () {
+            this._swizzleRenderTarget = new THREE.WebGLRenderTarget(this.width, this.height, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBFormat });
+            this._swizzleRenderTargetSftX = new THREE.WebGLRenderTarget(this.width, this.height, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBFormat });
+            this._swizzleRenderTargetSftY = new THREE.WebGLRenderTarget(this.width, this.height, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBFormat });
+            this._swizzleRenderTargetSftXY = new THREE.WebGLRenderTarget(this.width, this.height, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBFormat });
+            this._swizzleRenderTarget.generateMipmaps = false; this._swizzleRenderTargetSftX.generateMipmaps = false;
+            this._swizzleRenderTargetSftY.generateMipmaps = false; this._swizzleRenderTargetSftXY.generateMipmaps = false;
+            this.matSSSTest = new THREE.ShaderMaterial({
+                uniforms: {
+                    "tNormalViews": { type: "t", value: this._swizzleRenderTarget },
+                    "tSuperX": { type: "t", value: this._swizzleRenderTargetSftX },
+                    "tSuperY": { type: "t", value: this._swizzleRenderTargetSftY },
+                    "tSuperD": { type: "t", value: this._swizzleRenderTargetSftXY },
+                    "invASSS": { type: "fv1", value: invA_66 },
+                    "fader": { type: "f", value: 1.0 },
+                    "renderSize": { type: "v2", value: new THREE.Vector2(this.width, this.height) }
+                },
+                vertexShader: _SwizzleVertexShaderSrc,
+                fragmentShader: _SSSSwizzleFragmentShaderSrcTest,
+                depthWrite: false
+            });
+            this.materialSwizzle = this.matSSSTest;
+        }
 
-
+        
 
 
 
@@ -1394,6 +1581,7 @@ var LeiaWebGLRenderer = function (parameters) {
             case 1: this.useSharpenSwizzleShader(); break;
             case 2: this.useSuperSampleSwizzleShader(); break;
             case 3: this.useSSSSShader(); break;
+            case 4: this.useSSSSTestShader(); break;
             default:
                 this.useBasicSwizzleShader();
         }
@@ -1413,6 +1601,8 @@ var LeiaWebGLRenderer = function (parameters) {
                 case 1: this.useSharpenSwizzleShader(); break;
                 case 2: this.useSuperSampleSwizzleShader(); break;
                 case 3: this.useSSSSShader(); break;
+                case 4: this.useSSSSTestShader(); break;
+                    
                 default:
                     this.useBasicSwizzleShader();
             }
@@ -1430,13 +1620,14 @@ var LeiaWebGLRenderer = function (parameters) {
                 case 83: // 's'
                     //_that.bSuperSample = !_that.bSuperSample;
                     _that.nShaderMode++;
-                    _that.nShaderMode = _that.nShaderMode % 4;
+                    _that.nShaderMode = _that.nShaderMode % 5;
                     if (_that._shaderManager != undefined) {
                         switch (_that.nShaderMode) {
                             case 0: _that._shaderManager.useBasicSwizzleShader(); _that._shaderManager.LEIA_output.children[0].material = _that._shaderManager.matBasic; break;
                             case 1: _that._shaderManager.useSharpenSwizzleShader(); _that._shaderManager.LEIA_output.children[0].material = _that._shaderManager.matSharpen; break;
                             case 2: _that._shaderManager.useSuperSampleSwizzleShader(); _that._shaderManager.LEIA_output.children[0].material = _that._shaderManager.matSuperSample; break;
                             case 3: _that._shaderManager.useSSSSShader(); _that._shaderManager.LEIA_output.children[0].material = _that._shaderManager.matSSS;; break;
+                            case 4: _that._shaderManager.useSSSSTestShader(); _that._shaderManager.LEIA_output.children[0].material = _that._shaderManager.matSSSTest;; break;
                             //default:
                             //    _that._shaderManager.useBasicSwizzleShader(); _that._shaderManager.LEIA_output.children[0].material = _that._shaderManager.matBasic;
                         }
@@ -2176,14 +2367,14 @@ var LeiaWebGLRenderer = function (parameters) {
 		        } else if (1 == this._renderMode) {
 		            console.log("render64");
 		            Leia_compute_renderViews(scene, camera, renderTarget, forceClear);
-		            if (this.nShaderMode == 2 || this.nShaderMode == 3) {
+		            if (this.nShaderMode == 2 || this.nShaderMode == 3 || this.nShaderMode == 4) {
 		                Leia_compute_renderViews(scene, camera, renderTarget, forceClear, 0.5, 0.0);
 		                Leia_compute_renderViews(scene, camera, renderTarget, forceClear, 0.0, -0.5);
 		                Leia_compute_renderViews(scene, camera, renderTarget, forceClear, 0.5, -0.5);
 		            }
 		        } else if (2 == this._renderMode) {
 		            Leia_compute_renderViews(scene, camera, this._shaderManager._swizzleRenderTarget, forceClear);
-		            if (this.nShaderMode == 2 || this.nShaderMode == 3) {
+		            if (this.nShaderMode == 2 || this.nShaderMode == 3 || this.nShaderMode == 4) {
 		                Leia_compute_renderViews(scene, camera, this._shaderManager._swizzleRenderTargetSftX, forceClear, 0.5, 0.0);
 		                Leia_compute_renderViews(scene, camera, this._shaderManager._swizzleRenderTargetSftY, forceClear, 0.0, -0.5);
 		                Leia_compute_renderViews(scene, camera, this._shaderManager._swizzleRenderTargetSftXY, forceClear, 0.5, -0.5);
