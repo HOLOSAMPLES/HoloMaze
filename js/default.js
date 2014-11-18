@@ -37,7 +37,7 @@ var code = worker.toString();
 
 	function initScene() {
 	    renderer = new LeiaWebGLRenderer({
-	        antialias: true,
+	        //antialias: true,  one of performance necks
 	        renderMode: _renderMode,
 	        shaderMode: _nShaderMode,
 	        //camPanelVisible: _camPanelVisible,

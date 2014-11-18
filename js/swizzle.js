@@ -2241,6 +2241,8 @@ var LeiaWebGLRenderer = function (parameters) {
 			this.stateData._holoScreenSize = this._holoScreen.sizeX;
 			this.stateData._tarPosition = new THREE.Vector3(0, 0, 0);
 			this.stateData._tarPosition.copy(this._holoScreen.position);
+			scene.add(this._holoScreen.tarObj);
+			this._holoScreen.tarObj.visible = false;
 		}
 		if (!this.bShaderManInit) {
 			this._shaderManager = new CShaderManager();
@@ -2412,24 +2414,28 @@ var LeiaWebGLRenderer = function (parameters) {
 		    }
 
             // holo tuning panel  
-            //if (this.bGlobalView) {
-            if (!this.bGlobalViewInit) {
-                _globalView = new CGlobalView(camera, scene, renderTarget, forceClear);
-                this.bGlobalViewInit = true;
-                //_globalView.update();
-            } else {
-                _globalView.update();
-            }
-            //}
-            // gyro simulation panel
-            if (this.bGyroSimView) {
-                if (!this.bGyroSimViewInit) {
-                    _gyroView = new CGyroView(renderTarget, forceClear);
-                    this.bGyroSimViewInit = true;
-                } else {
-                    _gyroView.update();
-                }
-            }
+		    if (this.bGlobalView) 
+            {
+		        if (!this.bGlobalViewInit) {
+		            _globalView = new CGlobalView(camera, scene, renderTarget, forceClear);
+		            this.bGlobalViewInit = true;
+		        } else {
+		            _globalView.update();
+		        }
+		    }
+
+		    // gyro simulation panel
+		    if (this.bGyroSimView)
+		    {
+		        if (this.bGyroSimView) {
+		            if (!this.bGyroSimViewInit) {
+		                _gyroView = new CGyroView(renderTarget, forceClear);
+		                this.bGyroSimViewInit = true;
+		            } else {
+		                _gyroView.update();
+		            }
+		        }
+		    }
         }
 
     }
