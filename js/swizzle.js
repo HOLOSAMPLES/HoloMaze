@@ -1913,19 +1913,19 @@ var LeiaWebGLRenderer = function (parameters) {
             var camMaterial = new THREE.MeshNormalMaterial();
             var bHasCam = false;
             var obj, subObj, tarId;
-            for (var i = 0, l = scene.children.length; i < l; i++) {
-                obj = scene.children[i];
+            for (var _i = 0, _l = scene.children.length; _i < _l; _i++) {
+                obj = scene.children[_i];
                 if (obj == camera) {
                     bHasCam = true;
                 }
             }
             if (!bHasCam) {
-                for (var i = 0, l = scene.children.length; i < l; i++) {
-                    obj = scene.children[i];
-                    for (var j = 0, l = obj.children.length; j < l; j++) {
-                        subObj = obj.children[j];
+                for (var _ii = 0, _ll = scene.children.length; _ii < _ll; _ii++) {
+                    obj = scene.children[_ii];
+                    for (var _jj = 0, lll = obj.children.length; _jj < lll; _jj++) {
+                        subObj = obj.children[_jj];
                         if (subObj == camera) {
-                            tarId = j;
+                            tarId = _ii;
                         }
                     }
                 }
