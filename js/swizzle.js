@@ -880,10 +880,12 @@ var LeiaWebGLRenderer = function (parameters) {
         this.matSuperSample;
         this.matSSS;
         this.matSSSTest;
+        this.matDepth;
         this._swizzleRenderTargetSftX;
         this._swizzleRenderTargetSftY;
         this._swizzleRenderTargetSftXY;
         this._swizzleRenderTargetSSS;
+        this._DepthRenderTarget;
         this.width = _viewportWidth;
         this.height = _viewportHeight;
 
@@ -915,7 +917,7 @@ var LeiaWebGLRenderer = function (parameters) {
             "vec2 pixelCoord = vec2( floor((vUv.s)*renderSize.x), floor(vUv.t*renderSize.y) ); " +
             "pixelCoord      = vec2(max(pixelCoord.s - 0.0, 0.0), max(pixelCoord.t - 0.0, 0.0));" +
             "vec2 viewId     = vec2(   mod(pixelCoord.s,8.0)  ,   mod(pixelCoord.t,8.0)  ); " +
-            "vec2 sPixId     = vec2( floor(pixelCoord.s/8.0)  , floor(pixelCoord.t/8.0)  ); " +
+           "vec2 sPixId     = vec2( floor(pixelCoord.s/8.0)  , floor(pixelCoord.t/8.0)  ); " +
             //"vec2 sPixId     = vec2(   mod(pixelCoord.s, 200.0)  ,   mod(pixelCoord.t, 150.0)  ); " +
             //"vec2 viewId     = vec2( floor(pixelCoord.s/200.0)  , floor(pixelCoord.t/150.0)  ); " +
             "float fc        = 0.0;" +
@@ -1468,6 +1470,68 @@ var LeiaWebGLRenderer = function (parameters) {
             "gl_FragColor = vec4(fc, fc, fc, 1.0);" +
         "}";
 
+        // depth 
+        var _DepthFragmentShaderSrc =
+        "precision highp float;" +
+        "varying  vec2 vUv; 			\n" +
+        "uniform sampler2D tDepth; 			\n" +
+        "uniform vec2 renderSize;              \n " +
+        "float getPixel( in float amplitude, in sampler2D texture, in vec2 viewId, in vec2 sPixId) {  \n" +
+            "vec2 id  = vec2( ( sPixId.s + viewId.s*renderSize.x/8.0 )/renderSize.x + 1.0/(2.0*renderSize.x), ( sPixId.t + viewId.t*renderSize.y/8.0 )/renderSize.y+ 1.0/(2.0*renderSize.y) ); \n" +
+            //"vec4 p   = texture2D( texture, id );\n" +
+            //"float pb = amplitude * ( p.r + p.g + p.b ) / 3.0;\n" +
+            //"vec4 p    = texture2D( texture, id );\n" +
+            //"float pb = amplitude * p.r ;\n" +
+            "float pb = texture2D( texture, id ).r ;\n" +
+            "return pb;\n" +
+            "}\n" +
+
+        //"float bdepth(vec2 coords) {"+ss
+		//	//"// Depth buffer blur"+
+		//	//"float d = 0.0;"+
+		//	//"float kernel[9];"+
+		//	//"vec2 offset[9];"+
+
+		//	//"vec2 wh = vec2(texel.x, texel.y) * dbsize;"+
+
+		//	//"offset[0] = vec2(-wh.x,-wh.y);"+
+		//	//"offset[1] = vec2( 0.0, -wh.y);"+
+		//	//"offset[2] = vec2( wh.x -wh.y);"+
+
+		//	//"offset[3] = vec2(-wh.x,  0.0);"+
+		//	//"offset[4] = vec2( 0.0,   0.0);"+
+		//	//"offset[5] = vec2( wh.x,  0.0);"+
+
+		//	//"offset[6] = vec2(-wh.x, wh.y);"+
+		//	//"offset[7] = vec2( 0.0,  wh.y);"+
+		//	//"offset[8] = vec2( wh.x, wh.y);"+
+
+		//	//"kernel[0] = 1.0/16.0;   kernel[1] = 2.0/16.0;   kernel[2] = 1.0/16.0;"+
+		//	//"kernel[3] = 2.0/16.0;   kernel[4] = 4.0/16.0;   kernel[5] = 2.0/16.0;"+
+		//	//"kernel[6] = 1.0/16.0;   kernel[7] = 2.0/16.0;   kernel[8] = 1.0/16.0;"+
+
+
+		//	//"for( int i=0; i<9; i++ ) {"+
+		//		"float tmp = texture2D(tDepth, coords).r;"+
+		//		"d = tmp;"+
+		//	//"}"+
+
+		//	"return d;"+
+		//"}"+
+        "void main(void) {						\n" +
+            "vec2 pixelCoord = vec2( floor((vUv.s)*renderSize.x), floor(vUv.t*renderSize.y) ); " +
+            "pixelCoord      = vec2(max(pixelCoord.s - 0.0, 0.0), max(pixelCoord.t - 0.0, 0.0));" +
+            "vec2 viewId     = vec2(   mod(pixelCoord.s,8.0)  ,   mod(pixelCoord.t,8.0)  ); " +
+            "vec2 sPixId     = vec2( floor(pixelCoord.s/8.0)  , floor(pixelCoord.t/8.0)  ); " +
+            //"vec2 sPixId     = vec2(   mod(pixelCoord.s, 200.0)  ,   mod(pixelCoord.t, 150.0)  ); " +
+            //"vec2 viewId     = vec2( floor(pixelCoord.s/200.0)  , floor(pixelCoord.t/150.0)  ); " +
+            "float fc        = 0.5;" +
+            "fc = getPixel( 1.0, tDepth, viewId, sPixId);" +
+           // "fc = texture2D(tDepth, vUv.xy).r;" +
+           // "fc = 1.0 - fc;" +
+            "gl_FragColor = vec4(fc, fc, fc, 1.0);" +
+        "}";
+
 
 
         // member func
@@ -1556,10 +1620,6 @@ var LeiaWebGLRenderer = function (parameters) {
             //this._swizzleRenderTarget.generateMipmaps = false; this._swizzleRenderTargetSftX.generateMipmaps = false;
             //this._swizzleRenderTargetSftY.generateMipmaps = false; this._swizzleRenderTargetSftXY.generateMipmaps = false;
             this._swizzleRenderTargetSSS.generateMipmaps = false;
-
-
-
-
             this.matSSSTest = new THREE.ShaderMaterial({
                 uniforms: {
                     //"tNormal": { type: "t", value: this._swizzleRenderTarget },
@@ -1579,7 +1639,20 @@ var LeiaWebGLRenderer = function (parameters) {
             });
             this.materialSwizzle = this.matSSSTest;
         }
-
+        this.useDepthShader = function () {
+            this._DepthRenderTarget = new THREE.WebGLRenderTarget(this.width, this.height, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBFormat });
+            this._DepthRenderTarget.generateMipmaps = false;
+            this.matDepth = new THREE.ShaderMaterial({
+                uniforms: {
+                    "tDepth": { type: "t", value: this._DepthRenderTarget },
+                    "renderSize": { type: "v2", value: new THREE.Vector2(this.width, this.height) }
+                },
+                vertexShader: _SwizzleVertexShaderSrc,
+                fragmentShader: _DepthFragmentShaderSrc,
+                //depthWrite: true
+            });
+            this.materialSwizzle = this.matDepth;
+        };
         
 
 
@@ -1593,6 +1666,7 @@ var LeiaWebGLRenderer = function (parameters) {
             case 2: this.useSuperSampleSwizzleShader(); break;
             case 3: this.useSSSSShader(); break;
             case 4: this.useSSSSTestShader(); break;
+            case 5: this.useDepthShader(); break;
             default:
                 this.useBasicSwizzleShader();
         }
@@ -1613,7 +1687,7 @@ var LeiaWebGLRenderer = function (parameters) {
                 case 2: this.useSuperSampleSwizzleShader(); break;
                 case 3: this.useSSSSShader(); break;
                 case 4: this.useSSSSTestShader(); break;
-                    
+                case 5: this.useDepthShader(); break;
                 default:
                     this.useBasicSwizzleShader();
             }
@@ -1631,7 +1705,7 @@ var LeiaWebGLRenderer = function (parameters) {
                 case 83: // 's'
                     //_that.bSuperSample = !_that.bSuperSample;
                     _that.nShaderMode++;
-                    _that.nShaderMode = _that.nShaderMode % 5;
+                    _that.nShaderMode = _that.nShaderMode % 6;
                     if (_that._shaderManager != undefined) {
                         switch (_that.nShaderMode) {
                             case 0: _that._shaderManager.useBasicSwizzleShader(); _that._shaderManager.LEIA_output.children[0].material = _that._shaderManager.matBasic; break;
@@ -1639,6 +1713,7 @@ var LeiaWebGLRenderer = function (parameters) {
                             case 2: _that._shaderManager.useSuperSampleSwizzleShader(); _that._shaderManager.LEIA_output.children[0].material = _that._shaderManager.matSuperSample; break;
                             case 3: _that._shaderManager.useSSSSShader(); _that._shaderManager.LEIA_output.children[0].material = _that._shaderManager.matSSS;; break;
                             case 4: _that._shaderManager.useSSSSTestShader(); _that._shaderManager.LEIA_output.children[0].material = _that._shaderManager.matSSSTest;; break;
+                            case 5: _that._shaderManager.useDepthShader(); _that._shaderManager.LEIA_output.children[0].material = _that._shaderManager.matDepth;; break;
                             //default:
                             //    _that._shaderManager.useBasicSwizzleShader(); _that._shaderManager.LEIA_output.children[0].material = _that._shaderManager.matBasic;
                         }
@@ -1742,7 +1817,13 @@ var LeiaWebGLRenderer = function (parameters) {
 
         return outPosition;
     }
-    this.getCameraIntrinsic = function (camera, _tarObj) {
+    this.getCameraIntrinsic = function (camera, _tarObj, _i, _j) {
+        //if (_i == 0 && _j == 0) {
+        //    //console.log("_tarObj.geometry.vertices ", _i, _j, _tarObj.geometry.vertices[3]);
+        //    //console.log("camera.matrix ", _i, _j, camera.matrix.elements);
+        ////    console.log("_tarObj.matrix ", _i, _j, _tarObj.matrix.elements);
+        //}
+
         var _local_lrbt = [];
         for (var i = 0; i < 4; i++) {
             var point = new THREE.Vector3();
@@ -1751,8 +1832,11 @@ var LeiaWebGLRenderer = function (parameters) {
        // if (screen[0] !== undefined) {
             var camMat = new THREE.Matrix4();
             camMat.getInverse(camera.matrix);
-            camMat.multiply(_tarObj.matrix);
 
+            camMat.multiply(_tarObj.matrix);
+            //if (_i == 0 && _j == 0) {
+            //    console.log("camMat ", _i, _j, camMat.elements);
+            //}
             for (var i = 0; i < 4; i++) {
                // _local_lrbt[i].copy(screen[i]);
                 var __point = new THREE.Vector3(_tarObj.geometry.vertices[i].x, _tarObj.geometry.vertices[i].y, _tarObj.geometry.vertices[i].z);
@@ -1780,13 +1864,16 @@ var LeiaWebGLRenderer = function (parameters) {
                                         m31, m32, m33, m34,
                                         m41, m42, m43, m44);
         }
-
+        //camera.near = d * 0.6 ;
+        //camera.far = d * 3.0 ;
         camera.near = d * 0.6;
-        camera.far = d * 3;
-
-        //console.log("camera.near ", camera.near);
-        //console.log("camera.far ", camera.far);
-
+        camera.far = d * 1.15;
+        //if (_i == 0 && _j == 0) {
+        //    console.log("d ", d);
+        //    console.log("camera.near ", n);
+        //    console.log("camera.far ", f);
+        //}
+        //camera.updateProjectionMatrix();
         return d;
     }
 
@@ -1808,6 +1895,7 @@ var LeiaWebGLRenderer = function (parameters) {
 
         var _length = this.sizeX / 4.0;
         var geoTarRect = new THREE.PlaneGeometry(1 * _length * 4, 1 * _length * 3, 1, 1);
+      //  var matTarRect = new THREE.MeshDepthMaterial({ side: THREE.DoubleSide, overdraw: 0.5 });
         var matTarRect = new THREE.MeshBasicMaterial({ color: 0x0066aa, transparent: true, opacity: 0.2 });//0x4BD121
         matTarRect.side = THREE.DoubleSide;
         this.tarObj = new THREE.Mesh(geoTarRect, matTarRect);
@@ -1978,7 +2066,7 @@ var LeiaWebGLRenderer = function (parameters) {
                         scene.children[tarId].add(meshSXY);
                     }
 
-                    if (_that.nShaderMode == 0 || _that.nShaderMode == 1) {
+                    if (_that.nShaderMode == 0 || _that.nShaderMode == 1 || _that.nShaderMode == 5) {
                         meshSX.visible = false;
                         meshSY.visible = false;
                         meshSXY.visible = false;
@@ -2024,7 +2112,7 @@ var LeiaWebGLRenderer = function (parameters) {
                 for (var j = 0; j < npart; j++) {
                     var Gradient = new THREE.Vector3();
                     var EachTarPos = new THREE.Vector3();
-                    if (_that.nShaderMode == 0 || _that.nShaderMode == 1) {
+                    if (_that.nShaderMode == 0 || _that.nShaderMode == 1 || _that.nShaderMode == 5) {
                         var meshPosition = _that.getCameraPosition(camera.position, camera.targetPosition, camera.up, npart, i, j, Gradient, EachTarPos, _that.spanSphereMode);
                         this.camMeshs64[(i * npart + j) * 4 + 0].position.x = meshPosition.x;
                         this.camMeshs64[(i * npart + j) * 4 + 0].position.y = meshPosition.y;
@@ -2171,6 +2259,10 @@ var LeiaWebGLRenderer = function (parameters) {
             shiftX = 0;
         if (shiftY == undefined)
             shiftY = 0;
+
+        camera.updateMatrix();
+        _that._holoScreen.tarObj.rotation.setFromRotationMatrix(camera.matrix);
+        _that._holoScreen.tarObj.updateMatrix();
         for (var ii = 0; ii < npart; ii++)
             for (var jj = 0; jj < npart; jj++) {
                 if (renderTarget !== undefined) {
@@ -2187,11 +2279,15 @@ var LeiaWebGLRenderer = function (parameters) {
                 camera.position.x = camPosition.x;
                 camera.position.y = camPosition.y;
                 camera.position.z = camPosition.z;
+               
                 tmpM.lookAt(camera.position, EachTarPos, camera.up);
                 camera.quaternion.setFromRotationMatrix(tmpM);
                 camera.updateMatrix();
+               // _that._holoScreen.tarObj.updateMatrix();
+                //if(ii == 0&&jj==0)
+                //    console.log("_tarObj.geometry.vertices ", ii, jj, _that._holoScreen.tarObj.geometry.vertices[3]);
                 if (_that._holoScreen.tarObj.geometry.vertices[0] !== undefined) {
-                    _d = _that.getCameraIntrinsic(camera, _that._holoScreen.tarObj);
+                    _d = _that.getCameraIntrinsic(camera, _that._holoScreen.tarObj, ii, jj);
                 }
                 //if (renderTarget == _swizzleRenderTarget || renderTarget == _swizzleRenderTargetSftX || renderTarget == _swizzleRenderTargetSftY || renderTarget == _swizzleRenderTargetSftXY) {
                 if (renderTarget !== undefined) {
@@ -2200,6 +2296,7 @@ var LeiaWebGLRenderer = function (parameters) {
                     renderTarget.w = renderTarget.width / npart;
                     renderTarget.h = renderTarget.height / npart;
                 }
+                
                 _that.render(scene, camera, renderTarget, forceClear);
             }
         camera.position.x = camPositionCenter.x;
@@ -2361,8 +2458,11 @@ var LeiaWebGLRenderer = function (parameters) {
 		}
 	}
 	this.bRendering = true;
-    this.Leia_render = function (scene, camera, renderTarget, forceClear, holoScreenSize, holoCamFov, messageFlag) {
-		
+	this.material_depth = new THREE.MeshDepthMaterial();
+	this.Leia_render = function (scene, camera, renderTarget, forceClear, holoScreenSize, holoCamFov, messageFlag) {
+	    //camera.near = 25;
+	    //camera.far = 100;
+        scene.overrideMaterial = null;
 		this.SetUpRenderStates(scene, camera, renderTarget, forceClear, holoScreenSize, holoCamFov, messageFlag);
 		
 		if (this.bRendering) {
@@ -2383,6 +2483,7 @@ var LeiaWebGLRenderer = function (parameters) {
 		            if (_that._holoScreen.tarObj.geometry.vertices[0] !== undefined) {
 		                _d = this.getCameraIntrinsic(camera, _that._holoScreen.tarObj);
 		            }
+		            scene.overrideMaterial = _that.material_depth;
 		            this.render(scene, camera, renderTarget, forceClear);
 		        } else if (1 == this._renderMode) {
 		            console.log("render64");
@@ -2393,15 +2494,23 @@ var LeiaWebGLRenderer = function (parameters) {
 		                Leia_compute_renderViews(scene, camera, renderTarget, forceClear, 0.5, -0.5);
 		            }
 		        } else if (2 == this._renderMode) {
-		            if (this.nShaderMode !== 4) {
+		           // scene.overrideMaterial = null;
+		            if (this.nShaderMode == 0 || this.nShaderMode == 1 || this.nShaderMode == 2 || this.nShaderMode == 3 || this.nShaderMode == 5) {
 		                Leia_compute_renderViews(scene, camera, this._shaderManager._swizzleRenderTarget, forceClear);
-		                if (this.nShaderMode == 2 || this.nShaderMode == 3 || this.nShaderMode == 4) {
+		                if (this.nShaderMode == 2 || this.nShaderMode == 3 ) {
 		                    Leia_compute_renderViews(scene, camera, this._shaderManager._swizzleRenderTargetSftX, forceClear, 0.5, 0.0);
 		                    Leia_compute_renderViews(scene, camera, this._shaderManager._swizzleRenderTargetSftY, forceClear, 0.0, -0.5);
 		                    Leia_compute_renderViews(scene, camera, this._shaderManager._swizzleRenderTargetSftXY, forceClear, 0.5, -0.5);
 		                }
-		            } else {
+		            }
+		            if (this.nShaderMode == 4) {
+		              //  scene.overrideMaterial = null;
 		                Leia_compute_renderViews(scene, camera, this._shaderManager._swizzleRenderTargetSSS, forceClear, 0, 0, 16);
+		            }
+		            if (this.nShaderMode == 5) {
+		               // renderer.clear();
+		                scene.overrideMaterial = _that.material_depth;
+		                Leia_compute_renderViews(scene, camera, this._shaderManager._DepthRenderTarget, true);
 		            }
 		            this.setViewport(0, 0, _canvas.width, _canvas.height);// debug shadow, modify _viewport*** here
 		            this.setScissor(0, 0, _viewportWidth, _viewportHeight);
